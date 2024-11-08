@@ -184,7 +184,7 @@ You can control these actions by adjusting the settings in the `var.service_agen
 The `service_agents` output provides a convenient way to access information about all active service agents in the project. Note that this output only includes details for service agents that are currently active (i.e. their API is listed in `var.services`) within your project.
 
 > [!IMPORTANT]
-> You can only access a service agent's details through the `service_agents` output if it's corresponding API is enabled throught the `services` variable.
+> You can only access a service agent's details through the `service_agents` output if its corresponding API is enabled through the `services` variable.
 
 The complete list of Google Cloud service agents, including their names, default roles, and associated APIs, is maintained in the  [service-agents.yaml](./service-agents.yaml) file.  This file is regularly updated to reflect the [official list of Google Cloud service agents](https://cloud.google.com/iam/docs/service-agents) using the [`build_service_agents`](../../tools/build_service_agents.py) script.
 
@@ -273,7 +273,7 @@ service_agents = {
 
 Notice that some service agents appear under multiple names. For example, the Kubernetes Engine Service Agent shows up as `container-engine-robot` but also has the `container` and `container-engine` aliases. These aliases exist only in Fabric for convenience and backwards compatibility. Refer to the table below for the list of aliases.
 
-| Canonical Name                 Aliases                    |
+| Canonical Name                 | Aliases                    |
 |--------------------------------|----------------------------|
 | bigquery-encryption            | bq                         |
 | cloudservices                  | cloudsvc                   |
@@ -737,11 +737,31 @@ module "project" {
     "storage.googleapis.com"
   ]
   service_encryption_key_ids = {
-    "compute.googleapis.com" = [var.kms_key.id]
-    "storage.googleapis.com" = [var.kms_key.id]
+    "compute.googleapis.com" = [module.kms.keys.key-regional.id]
+    "storage.googleapis.com" = [module.kms.keys.key-regional.id]
   }
 }
-# tftest modules=1 resources=7 e2e
+
+module "kms" {
+  source     = "./fabric/modules/kms"
+  project_id = var.project_id # KMS is in different project to prevent dependency cycle
+  keyring = {
+    location = var.region
+    name     = "keyring"
+  }
+  keys = {
+    "key-regional" = {
+    }
+  }
+  iam = {
+    "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
+      module.project.service_agents.compute.iam_email,
+      module.project.service_agents.storage.iam_email,
+    ]
+  }
+}
+
+# tftest modules=2 resources=10 e2e
 ```
 
 ## Tags
@@ -1274,8 +1294,27 @@ module "project" {
     "storage.googleapis.com",
   ]
   service_encryption_key_ids = {
-    "compute.googleapis.com" = [var.kms_key.id]
-    "storage.googleapis.com" = [var.kms_key.id]
+    "compute.googleapis.com" = [module.kms.keys.key-global.id]
+    "storage.googleapis.com" = [module.kms.keys.key-global.id]
+  }
+}
+
+module "kms" {
+  source     = "./fabric/modules/kms"
+  project_id = var.project_id # Keys come from different project to prevent dependency cycle
+  keyring = {
+    location = "global"
+    name     = "keyring"
+  }
+  keys = {
+    "key-global" = {
+    }
+  }
+  iam = {
+    "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
+      module.project.service_agents.compute.iam_email,
+      module.project.service_agents.storage.iam_email
+    ]
   }
 }
 
@@ -1318,7 +1357,7 @@ module "bucket" {
   parent      = var.project_id
   id          = "${var.prefix}-bucket"
 }
-# tftest modules=7 resources=61 inventory=data.yaml e2e
+# tftest inventory=data.yaml e2e
 ```
 
 <!-- TFDOC OPTS files:1 -->

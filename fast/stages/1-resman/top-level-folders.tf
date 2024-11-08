@@ -68,7 +68,7 @@ locals {
 module "top-level-folder" {
   source              = "../../../modules/folder"
   for_each            = local.top_level_folders
-  parent              = "organizations/${var.organization.id}"
+  parent              = local.root_node
   name                = each.value.name
   contacts            = each.value.contacts
   firewall_policy     = each.value.firewall_policy
@@ -123,14 +123,13 @@ module "top-level-sa" {
 }
 
 module "top-level-bucket" {
-  source        = "../../../modules/gcs"
-  for_each      = local.top_level_automation
-  project_id    = var.automation.project_id
-  name          = "prod-resman-${each.key}-0"
-  prefix        = var.prefix
-  location      = var.locations.gcs
-  storage_class = local.gcs_storage_class
-  versioning    = true
+  source     = "../../../modules/gcs"
+  for_each   = local.top_level_automation
+  project_id = var.automation.project_id
+  name       = "prod-resman-${each.key}-0"
+  prefix     = var.prefix
+  location   = var.locations.gcs
+  versioning = true
   iam = {
     "roles/storage.objectAdmin"  = [module.top-level-sa[each.key].iam_email]
     "roles/storage.objectViewer" = [module.top-level-sa[each.key].iam_email]

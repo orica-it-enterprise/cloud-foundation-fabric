@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Google LLC
+ * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,16 @@
  */
 
 resource "google_cloud_run_v2_job" "job" {
-  count        = var.create_job ? 1 : 0
-  provider     = google-beta
-  project      = var.project_id
-  location     = var.region
-  name         = "${local.prefix}${var.name}"
-  labels       = var.labels
-  launch_stage = var.launch_stage
+  count               = var.create_job ? 1 : 0
+  provider            = google-beta
+  project             = var.project_id
+  location            = var.region
+  name                = "${local.prefix}${var.name}"
+  labels              = var.labels
+  launch_stage        = var.launch_stage
+  deletion_protection = var.deletion_protection
   template {
+    task_count = var.revision.job.task_count
     template {
       encryption_key = var.encryption_key
       dynamic "vpc_access" {
@@ -42,6 +44,7 @@ resource "google_cloud_run_v2_job" "job" {
           }
         }
       }
+      max_retries     = var.revision.job.max_retries
       timeout         = var.revision.timeout
       service_account = local.service_account_email
       dynamic "containers" {
@@ -122,6 +125,21 @@ resource "google_cloud_run_v2_job" "job" {
             content {
               medium     = "MEMORY"
               size_limit = volumes.value.empty_dir_size
+            }
+          }
+          dynamic "gcs" {
+            for_each = volumes.value.gcs == null ? [] : [""]
+            content {
+              bucket    = volumes.value.bucket
+              read_only = volumes.value.is_read_only
+            }
+          }
+          dynamic "nfs" {
+            for_each = volumes.value.nfs == null ? [] : [""]
+            content {
+              server    = volumes.value.server
+              path      = volumes.value.path
+              read_only = volumes.value.is_read_only
             }
           }
         }

@@ -55,8 +55,10 @@ locals {
       contains(
         keys(local.identity_providers),
         coalesce(try(v.identity_provider, null), ":")
-      ) &&
-      fileexists("${path.module}/templates/workflow-${try(v.type, "")}.yaml")
+        ) && (
+        try(v.type, "") == "terraform" ||
+        fileexists("${path.module}/templates/workflow-${try(v.type, "")}.yaml")
+      )
     )
   }
   cicd_workflow_var_files = {
@@ -74,11 +76,6 @@ locals {
     ]
   }
   custom_roles = coalesce(var.custom_roles, {})
-  gcs_storage_class = (
-    length(split("-", var.locations.gcs)) < 2
-    ? "MULTI_REGIONAL"
-    : "REGIONAL"
-  )
   identity_providers = coalesce(
     try(var.automation.federated_identity_providers, null), {}
   )

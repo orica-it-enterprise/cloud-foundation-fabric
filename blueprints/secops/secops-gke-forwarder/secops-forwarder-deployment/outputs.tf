@@ -14,20 +14,7 @@
  * limitations under the License.
  */
 
-terraform {
-  backend "gcs" {
-    bucket                      = "${bucket}"
-    impersonate_service_account = "${sa}"
-    %{~ if backend_extra != null ~}
-    ${indent(4, backend_extra)}
-    %{~ endif ~}
-  }
+output "tenants_ssl_cert_ca" {
+  description = "Tenants Self Signed CA certificates."
+  value       = tls_self_signed_cert.forwarder_ca_cert
 }
-provider "google" {
-  impersonate_service_account = "${sa}"
-}
-provider "google-beta" {
-  impersonate_service_account = "${sa}"
-}
-
-# end provider.tf for ${name}

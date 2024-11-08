@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 
-terraform {
-  backend "gcs" {
-    bucket                      = "${bucket}"
-    impersonate_service_account = "${sa}"
-    %{~ if backend_extra != null ~}
-    ${indent(4, backend_extra)}
-    %{~ endif ~}
-  }
-}
-provider "google" {
-  impersonate_service_account = "${sa}"
-}
-provider "google-beta" {
-  impersonate_service_account = "${sa}"
+variable "iam" {
+  description = "IAM bindings."
+  type        = map(list(string))
+  default     = {}
 }
 
-# end provider.tf for ${name}
+variable "iam_bindings" {
+  description = "IAM bindings."
+  type = map(object({
+    role    = string
+    members = list(string)
+  }))
+  default = {}
+}
+
+variable "iam_bindings_additive" {
+  description = "IAM bindings."
+  type = map(object({
+    role   = string
+    member = string
+  }))
+  default = {}
+}
